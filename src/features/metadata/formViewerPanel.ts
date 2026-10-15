@@ -265,21 +265,26 @@ export async function openFormViewer(
 	endOpenPanel('form', params.formXmlFsPath);
 
 	// Форма принадлежит объекту: правку запрещает поддержка самого объекта
-	if (!supportEnabled()) {
-		return undefined;
-	}
-	const support = await runMdSparrowParamsRead(
-		runtime,
-		{ op: 'cf-support-object-get', objectXml: params.formXmlFsPath },
-		{ cwd: params.cwd }
-	);
 	let readonlyReason: string | undefined;
-	if (support.exitCode === 0) {
-		try {
-			const state = JSON.parse(support.stdout.trim()) as { editable?: boolean; reason?: string };
-			readonlyReason = state.editable === false ? state.reason : undefined;
-		} catch {
-			readonlyReason = undefined;
+	if (supportEnabled()) {
+		// Общая форма сама является объектом метаданных.
+		const formDirectory = path.dirname(params.formXmlFsPath);
+		const objectXml = formOwnerFileOf(params.formXmlFsPath)
+			?? (formatOfFile(params.formXmlFsPath) === 'edt'
+				? path.join(formDirectory, `${path.basename(formDirectory)}.mdo`)
+				: `${path.dirname(formDirectory)}.xml`);
+		const support = await runMdSparrowParamsRead(
+			runtime,
+			{ op: 'cf-support-object-get', objectXml },
+			{ cwd: params.cwd }
+		);
+		if (support.exitCode === 0) {
+			try {
+				const state = JSON.parse(support.stdout.trim()) as { editable?: boolean; reason?: string };
+				readonlyReason = state.editable === false ? state.reason : undefined;
+			} catch {
+				readonlyReason = undefined;
+			}
 		}
 	}
 	const paletteOwner = params.formXmlFsPath;

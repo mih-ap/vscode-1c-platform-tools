@@ -650,7 +650,7 @@ export class PropertyPaletteViewProvider implements vscode.WebviewViewProvider {
 		function syncSaveBar() {
 			saveBar.classList.toggle('is-shown', editable);
 			saveBtn.disabled = draft.size === 0;
-			for (const button of list.querySelectorAll<HTMLButtonElement>('.row-action')) {
+			for (const button of list.querySelectorAll('.row-action')) {
 				button.disabled = draft.size > 0;
 				button.title = draft.size > 0 ? 'Сначала запишите изменения свойств' : button.textContent;
 			}
