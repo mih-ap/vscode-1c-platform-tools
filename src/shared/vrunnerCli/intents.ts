@@ -60,7 +60,7 @@ export type VRunnerIntent =
 	 * Отдельной опции для файла версий здесь нет: `--versions` на файл внутри
 	 * каталога выгрузки ломает инкремент - конфигуратор отвечает «Каталог не пуст».
 	 */
-	| { kind: 'cf.dumpIbToSrc'; out: string; common?: CommonArgs }
+	| { kind: 'cf.dumpIbToSrc'; out: string; incremental?: boolean; common?: CommonArgs }
 	/** Выгрузить конфигурацию ИБ в .cf. */
 	| { kind: 'cf.unloadIbToCf'; out: string; common?: CommonArgs }
 	/** Создать файл поставки конфигурации (.cf). */

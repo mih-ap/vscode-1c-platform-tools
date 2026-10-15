@@ -192,6 +192,7 @@ export class ConfigurationCommands extends BaseCommand {
 			{
 				kind: 'cf.dumpIbToSrc',
 				out: srcPath,
+				incremental: versionFileExists,
 				common: ibConnectionParam,
 			},
 			opts,

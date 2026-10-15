@@ -178,6 +178,15 @@ suite('vrunnerCli: адаптеры v2/v3', () => {
 		);
 	});
 
+	test('cf.dumpIbToSrc с инкрементом вызывает Конфигуратор в режиме обновления', () => {
+		const additional = '/DumpConfigToFiles "src/cf" -format Hierarchical -update';
+		check(
+			{ kind: 'cf.dumpIbToSrc', out: 'src/cf', incremental: true, common: conn },
+			[['designer', '--additional', additional, ...conn]],
+			[['run', 'designer', '--additional', additional, ...conn]]
+		);
+	});
+
 	test('cf.unloadIbToCf', () => {
 		check(
 			{ kind: 'cf.unloadIbToCf', out: 'build/out/1Cv8.cf', common: conn },
