@@ -78,6 +78,7 @@ export type MdSparrowOp =
 	| 'cf-md-object-set'
 	| 'cf-configuration-properties-set'
 	| 'cf-form-item-properties-set'
+	| 'cf-form-event-set'
 	| 'init-empty-cf'
 	| 'init-empty-cfe'
 	| 'add-md-object'
@@ -161,6 +162,10 @@ export interface MdSparrowParams {
 	name?: string;
 	oldName?: string;
 	newName?: string;
+	itemId?: string;
+	event?: string;
+	handler?: string;
+	callType?: string;
 	sourceName?: string;
 	tabularSection?: string;
 	/** Версия схемы в формате `V2_20` (как флаг `-v`). */

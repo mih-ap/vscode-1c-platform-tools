@@ -34,6 +34,8 @@ export interface PropertyRow {
 	readonly hint?: string;
 	/** Состояние свойства заимствованного узла: отметка под подписью. */
 	readonly state?: { readonly label: string; readonly hint: string; readonly changed: boolean };
+	/** Действие над строкой, например назначение или снятие обработчика события. */
+	readonly action?: { readonly id: string; readonly label: string; readonly title?: string };
 }
 
 /** Изменённые значения: ключ строки -> новое значение. */
@@ -56,6 +58,7 @@ export type PropertyApplyHandler = (edits: PropertyEdits) => Promise<PropertyPal
  * @returns Свойства с учётом правки или undefined, если пересобрать нечем
  */
 export type PropertyPreviewHandler = (edits: PropertyEdits) => Promise<PropertyPaletteState | undefined>;
+export type PropertyActionHandler = (actionId: string) => Promise<void> | void;
 
 /** Группа свойств: заголовок и строки в порядке источника. */
 export interface PropertyGroup {
@@ -81,6 +84,7 @@ export class PropertyPaletteViewProvider implements vscode.WebviewViewProvider {
 	private _ownerId: string | undefined;
 	private _onApply: PropertyApplyHandler | undefined;
 	private _onPreview: PropertyPreviewHandler | undefined;
+	private _onAction: PropertyActionHandler | undefined;
 	private readonly _onDidChangeVisibility = new vscode.EventEmitter<void>();
 	/** Фокус в этой панели. */
 	private _inputFocused = false;
@@ -114,13 +118,15 @@ export class PropertyPaletteViewProvider implements vscode.WebviewViewProvider {
 		};
 		view.webview.html = this.html();
 		view.webview.onDidReceiveMessage((message: unknown) => {
-			const msg = message as { type?: string; edits?: PropertyEdits } | null;
+			const msg = message as { type?: string; edits?: PropertyEdits; actionId?: string } | null;
 			if (msg?.type === 'ready') {
 				this.push();
 			} else if (msg?.type === 'apply') {
 				void this.apply(msg.edits ?? {});
 			} else if (msg?.type === 'preview') {
 				void this.preview(msg.edits ?? {});
+			} else if (msg?.type === 'action' && msg.actionId) {
+				void this.action(msg.actionId);
 			} else if (msg?.type === 'focus') {
 				this.setInputFocused(true);
 			} else if (msg?.type === 'blur') {
@@ -148,12 +154,14 @@ export class PropertyPaletteViewProvider implements vscode.WebviewViewProvider {
 		ownerId: string,
 		state: PropertyPaletteState,
 		onApply?: PropertyApplyHandler,
-		onPreview?: PropertyPreviewHandler
+		onPreview?: PropertyPreviewHandler,
+		onAction?: PropertyActionHandler
 	): void {
 		this._ownerId = ownerId;
 		this._state = state;
 		this._onApply = onApply;
 		this._onPreview = onPreview;
+		this._onAction = onAction;
 		this.push();
 		this.syncHeader();
 	}
@@ -182,6 +190,7 @@ export class PropertyPaletteViewProvider implements vscode.WebviewViewProvider {
 		this._state = undefined;
 		this._onApply = undefined;
 		this._onPreview = undefined;
+		this._onAction = undefined;
 		this.push();
 		this.syncHeader();
 	}
@@ -202,6 +211,17 @@ export class PropertyPaletteViewProvider implements vscode.WebviewViewProvider {
 			}
 		} catch {
 			// Пересборка показа не критична: панель останется с прежним составом строк
+		}
+	}
+
+	private async action(actionId: string): Promise<void> {
+		try {
+			await this._onAction?.(actionId);
+		} catch (e) {
+			void this._view?.webview.postMessage({
+				type: 'actionError',
+				message: e instanceof Error ? e.message : String(e),
+			});
 		}
 	}
 
@@ -347,6 +367,20 @@ export class PropertyPaletteViewProvider implements vscode.WebviewViewProvider {
 		flex: 1;
 		min-width: 0;
 		word-break: break-word;
+	}
+	.row-action {
+		flex: none;
+		border: 1px solid var(--vscode-button-border, transparent);
+		border-radius: 2px;
+		padding: 1px 6px;
+		background: var(--vscode-button-secondaryBackground);
+		color: var(--vscode-button-secondaryForeground);
+		font: inherit;
+		cursor: pointer;
+	}
+	.row-action:disabled {
+		opacity: 0.45;
+		cursor: default;
 	}
 	.row.is-changed .row-label {
 		opacity: 1;
@@ -590,6 +624,17 @@ export class PropertyPaletteViewProvider implements vscode.WebviewViewProvider {
 				value.textContent = displayText(row);
 			}
 			line.append(value);
+			if (row.action && editable) {
+				const button = element('button', 'row-action', row.action.label);
+				button.type = 'button';
+				button.disabled = draft.size > 0;
+				button.title = row.action.title || row.action.label;
+				button.addEventListener('click', (event) => {
+					event.stopPropagation();
+					vscode.postMessage({ type: 'action', actionId: row.action.id });
+				});
+				line.append(button);
+			}
 			// Выделение переставляем классом: перерисовка вырвала бы фокус из редактора под курсором.
 			line.addEventListener('click', () => {
 				selectedKey = row.key;
@@ -605,6 +650,10 @@ export class PropertyPaletteViewProvider implements vscode.WebviewViewProvider {
 		function syncSaveBar() {
 			saveBar.classList.toggle('is-shown', editable);
 			saveBtn.disabled = draft.size === 0;
+			for (const button of list.querySelectorAll<HTMLButtonElement>('.row-action')) {
+				button.disabled = draft.size > 0;
+				button.title = draft.size > 0 ? 'Сначала запишите изменения свойств' : button.textContent;
+			}
 			if (draft.size > 0) {
 				saveStatus.classList.remove('is-error');
 				saveStatus.textContent = 'Изменено свойств: ' + draft.size;
@@ -699,6 +748,9 @@ export class PropertyPaletteViewProvider implements vscode.WebviewViewProvider {
 					saveStatus.classList.add('is-error');
 					saveStatus.textContent = message.error || 'Не удалось записать';
 				}
+			} else if (message.type === 'actionError') {
+				saveStatus.classList.add('is-error');
+				saveStatus.textContent = message.message || 'Не удалось выполнить действие';
 			}
 		});
 		window.addEventListener('focus', () => vscode.postMessage({ type: 'focus' }));
