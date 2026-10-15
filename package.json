@@ -1447,6 +1447,11 @@
         "category": "1С: Конфигурация"
       },
       {
+        "command": "1c-platform-tools.cf.updateFromRepository",
+        "title": "Обновить конфигурацию из хранилища",
+        "category": "1С: Конфигурация"
+      },
+      {
         "command": "1c-platform-tools.cf.loadByList",
         "title": "Загрузить из objlist.txt",
         "category": "1С: Конфигурация"

@@ -270,6 +270,9 @@ export function registerCommands(
 
 	// Команды конфигурации
 	const configurationCommands = [
+		registerVRunnerCommand('1c-platform-tools.cf.updateFromRepository', (opts) =>
+			commands.configuration.updateFromRepository(opts)
+		),
 		registerVRunnerCommand('1c-platform-tools.cf.load', (opts) =>
 			commands.configuration.loadFromSrc('load', opts)
 		),

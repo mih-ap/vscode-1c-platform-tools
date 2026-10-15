@@ -44,6 +44,7 @@ description: "Операции с платформой 1С в этом прое�
 | Задача | Command ID | MCP |
 |---|---|---|
 | Загрузить из исходного кода | `1c-platform-tools.cf.load` | `cf_load` |
+| Обновить из хранилища конфигурации | `1c-platform-tools.cf.updateFromRepository` | `cf_updateFromRepository` |
 | Загрузить изменения | `1c-platform-tools.cf.loadIncrement` | `cf_loadInc` |
 | Загрузить из objlist.txt | `1c-platform-tools.cf.loadByList` | `cf_loadByList` |
 | Загрузить из 1Cv8.cf | `1c-platform-tools.cf.loadFile` | `cf_loadFile` |

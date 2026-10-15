@@ -24,6 +24,14 @@ suite('vrunnerCli: адаптеры v2/v3', () => {
 		);
 	});
 
+	test('repo.load обновляет конфигурацию из хранилища', () => {
+		check(
+			{ kind: 'repo.load', common: conn },
+			[['loadrepo', ...conn]],
+			[['repo', 'load', ...conn]]
+		);
+	});
+
 	test('infobase.init со src', () => {
 		check(
 			{ kind: 'infobase.init', src: 'src/cf', common: conn },

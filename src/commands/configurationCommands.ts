@@ -5,6 +5,7 @@ import * as vscode from 'vscode';
 import { BaseCommand, type OutputTarget } from './baseCommand';
 import {
 	getLoadConfigurationFromSrcCommandName,
+	getUpdateConfigurationFromRepositoryCommandName,
 	getLoadConfigurationFromCfCommandName,
 	getDumpConfigurationToSrcCommandName,
 	getDumpConfigurationIncrementToSrcCommandName,
@@ -113,6 +114,15 @@ export class ConfigurationCommands extends BaseCommand {
 		}
 		return this.runIntent(
 			{ kind: 'cf.loadFromSrc', src: srcPath, updateDb, common: ibConnectionParam },
+			opts, commandName.title, undefined, commandName.id
+		);
+	}
+
+	async updateFromRepository(opts?: CommandExecutionOptions): Promise<StructuredCommandResult | void> {
+		const ibConnectionParam = await this.vrunner.getIbConnectionParam();
+		const commandName = getUpdateConfigurationFromRepositoryCommandName();
+		return this.runIntent(
+			{ kind: 'repo.load', common: ibConnectionParam },
 			opts, commandName.title, undefined, commandName.id
 		);
 	}

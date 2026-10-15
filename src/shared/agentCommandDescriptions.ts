@@ -169,6 +169,10 @@ export const AGENT_COMMAND_DESCRIPTIONS: Record<string, AgentCommandDescription>
 		title: 'Загрузить конфигурацию в ИБ из исходного кода проекта',
 		category: CONFIGURATION,
 	},
+	'1c-platform-tools.cf.updateFromRepository': {
+		title: 'Обновить конфигурацию информационной базы до последней версии из хранилища конфигурации; обновление конфигурации БД выполняется отдельно',
+		category: CONFIGURATION,
+	},
 	'1c-platform-tools.infobase.initFromSrc': {
 		title: 'Загрузить конфигурацию в пустую ИБ из исходного кода проекта',
 		category: CONFIGURATION,

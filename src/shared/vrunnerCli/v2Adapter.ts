@@ -78,6 +78,8 @@ export class V2CliAdapter implements VRunnerCliAdapter {
 					...common(intent)
 				]];
 			}
+			case 'repo.load':
+				return [['loadrepo', ...common(intent)]];
 
 			// ---- Конфигурация ----
 			case 'cf.build':

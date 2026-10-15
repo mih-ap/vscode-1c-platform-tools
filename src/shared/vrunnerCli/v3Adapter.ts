@@ -181,6 +181,8 @@ export class V3CliAdapter implements VRunnerCliAdapter {
 				const options = intent.json ? ['--json'] : [];
 				return [cmd(['infobase', 'extensions', 'list'], [...options, ...common(intent)], [])];
 			}
+			case 'repo.load':
+				return [cmd(['repo', 'load'], common(intent), [])];
 
 			// ---- Конфигурация ----
 			case 'cf.build':

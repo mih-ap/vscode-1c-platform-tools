@@ -27,6 +27,7 @@ import {
 	getSetupGitCommandName,
 	getUpdateOpmCommandName,
 	getLoadConfigurationFromSrcCommandName,
+	getUpdateConfigurationFromRepositoryCommandName,
 	getLoadConfigurationIncrementFromSrcCommandName,
 	getLoadConfigurationFromFilesByListCommandName,
 	getLoadConfigurationFromCfCommandName,
@@ -139,6 +140,7 @@ export const TREE_GROUPS: TreeGroup[] = [
 		sectionType: 'configuration',
 		defaultCollapsibleState: 'expanded',
 		commands: [
+			{ command: '1c-platform-tools.cf.updateFromRepository', title: getUpdateConfigurationFromRepositoryCommandName().title, treeLabel: '🔄 Обновить из хранилища', formats: ['designer'] },
 			{ command: '1c-platform-tools.cf.load', title: getLoadConfigurationFromSrcCommandName().title, treeLabel: '📥 Загрузить из исходного кода'},
 			{ command: '1c-platform-tools.cf.loadIncrement', title: getLoadConfigurationIncrementFromSrcCommandName().title, treeLabel: '📥 Загрузить изменения (git diff)' , formats: ['designer']},
 			{ command: '1c-platform-tools.cf.loadByList', title: getLoadConfigurationFromFilesByListCommandName().title, treeLabel: '📥 Загрузить из objlist.txt' , formats: ['designer']},

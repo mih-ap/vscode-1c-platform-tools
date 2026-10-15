@@ -55,6 +55,7 @@ description: Инструменты MCP сервера mcp-1c-platform-tools. И
 | Инструмент | Command ID | wait: true | Параметры |
 |---|---|---|---|
 | `cf_load` | `1c-platform-tools.cf.load` | результат | `updateDb` |
+| `cf_updateFromRepository` | `1c-platform-tools.cf.updateFromRepository` | результат | — |
 | `cf_loadInc` | `1c-platform-tools.cf.loadIncrement` | результат | `sha`, `updateDb` |
 | `cf_loadFile` | `1c-platform-tools.cf.loadFile` | результат | `updateDb` |
 | `cf_loadByList` | `1c-platform-tools.cf.loadByList` | отказ | «Загрузка по objlist.txt требует подготовки списка в UI; wait: true недоступен» |
