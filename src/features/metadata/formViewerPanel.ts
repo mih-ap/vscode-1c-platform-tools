@@ -322,15 +322,16 @@ export async function openFormViewer(
 				validateInput: (value) => isBslIdentifier(value) ? undefined : 'Укажите имя процедуры, допустимое как идентификатор 1С',
 			});
 			if (!procedure) { return; }
-			handler = procedure.trim();
+			const handlerName = procedure.trim();
+			handler = handlerName;
 			let moduleText: string;
 			try {
 				moduleText = await fs.readFile(params.moduleFsPath, 'utf8');
 			} catch {
 				throw new Error('Сначала создайте и сохраните процедуру обработчика в модуле формы');
 			}
-			if (!moduleText.split(/\r?\n/).some((line) => declaresMethod(line, handler))) {
-				throw new Error(`Процедура ${handler} не найдена в модуле формы. Создайте и сохраните её, затем назначьте обработчик`);
+			if (!moduleText.split(/\r?\n/).some((line) => declaresMethod(line, handlerName))) {
+				throw new Error(`Процедура ${handlerName} не найдена в модуле формы. Создайте и сохраните её, затем назначьте обработчик`);
 			}
 		} else if (actionId.startsWith('event.remove:')) {
 			eventName = actionId.slice('event.remove:'.length);
