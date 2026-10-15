@@ -265,21 +265,26 @@ export async function openFormViewer(
 	endOpenPanel('form', params.formXmlFsPath);
 
 	// Форма принадлежит объекту: правку запрещает поддержка самого объекта
-	if (!supportEnabled()) {
-		return undefined;
-	}
-	const support = await runMdSparrowParamsRead(
-		runtime,
-		{ op: 'cf-support-object-get', objectXml: params.formXmlFsPath },
-		{ cwd: params.cwd }
-	);
 	let readonlyReason: string | undefined;
-	if (support.exitCode === 0) {
-		try {
-			const state = JSON.parse(support.stdout.trim()) as { editable?: boolean; reason?: string };
-			readonlyReason = state.editable === false ? state.reason : undefined;
-		} catch {
-			readonlyReason = undefined;
+	if (supportEnabled()) {
+		// Общая форма сама является объектом метаданных.
+		const formDirectory = path.dirname(params.formXmlFsPath);
+		const objectXml = formOwnerFileOf(params.formXmlFsPath)
+			?? (formatOfFile(params.formXmlFsPath) === 'edt'
+				? path.join(formDirectory, `${path.basename(formDirectory)}.mdo`)
+				: `${path.dirname(formDirectory)}.xml`);
+		const support = await runMdSparrowParamsRead(
+			runtime,
+			{ op: 'cf-support-object-get', objectXml },
+			{ cwd: params.cwd }
+		);
+		if (support.exitCode === 0) {
+			try {
+				const state = JSON.parse(support.stdout.trim()) as { editable?: boolean; reason?: string };
+				readonlyReason = state.editable === false ? state.reason : undefined;
+			} catch {
+				readonlyReason = undefined;
+			}
 		}
 	}
 	const paletteOwner = params.formXmlFsPath;
@@ -289,11 +294,71 @@ export async function openFormViewer(
 		const itemId = item.id;
 		params.propertyPalette?.show(
 			paletteOwner,
-			formItemProperties(item, dictionary),
+			formItemProperties(item, dictionary, true),
 			itemId === undefined || readonlyReason !== undefined
 				? undefined
-				: (edits) => applyEdits(itemId, specs, edits)
+				: (edits) => applyEdits(itemId, specs, edits),
+			undefined,
+			itemId === undefined || readonlyReason !== undefined
+				? undefined
+				: (actionId) => applyEventAction(itemId, item, actionId)
 		);
+	};
+
+	const applyEventAction = async (itemId: string, item: FormItemDto, actionId: string): Promise<void> => {
+		let eventName: string;
+		let handler: string | undefined;
+		if (actionId === 'event.add') {
+			const event = await vscode.window.showInputBox({
+				title: `Добавить событие: ${item.name ?? item.type ?? ''}`,
+				prompt: 'Имя события платформы, например OnChange',
+				placeHolder: 'OnChange',
+				validateInput: (value) => isPlatformEventName(value) ? undefined : 'Имя события должно быть латинским идентификатором платформы',
+			});
+			if (!event) { return; }
+			eventName = event.trim();
+			if (item.events?.some((entry) => entry.name === eventName)) {
+				throw new Error(`Обработчик события ${eventName} уже назначен`);
+			}
+			const procedure = await vscode.window.showInputBox({
+				title: `Обработчик события ${eventName}`,
+				prompt: 'Имя существующей процедуры в модуле формы',
+				placeHolder: `${item.name ?? 'Элемент'}ПриИзменении`,
+				validateInput: (value) => isBslIdentifier(value) ? undefined : 'Укажите имя процедуры, допустимое как идентификатор 1С',
+			});
+			if (!procedure) { return; }
+			const handlerName = procedure.trim();
+			handler = handlerName;
+			let moduleText: string;
+			try {
+				moduleText = await fs.readFile(params.moduleFsPath, 'utf8');
+			} catch {
+				throw new Error('Сначала создайте и сохраните процедуру обработчика в модуле формы');
+			}
+			if (!moduleText.split(/\r?\n/).some((line) => declaresMethod(line, handlerName))) {
+				throw new Error(`Процедура ${handlerName} не найдена в модуле формы. Создайте и сохраните её, затем назначьте обработчик`);
+			}
+		} else if (actionId.startsWith('event.remove:')) {
+			eventName = actionId.slice('event.remove:'.length);
+		} else {
+			return;
+		}
+
+		const result = await runMdSparrowParamsMutation(runtime, {
+			op: 'cf-form-event-set',
+			formXml: params.formXmlFsPath,
+			schemaVersion: schema,
+			itemId,
+			event: eventName,
+			handler,
+		}, { cwd: params.cwd });
+		if (result.exitCode !== 0) {
+			throw new Error(result.stderr.trim() || result.stdout.trim() || `Код ${result.exitCode}`);
+		}
+		content = await readFormContent(runtime, params.formXmlFsPath, schema, params.cwd);
+		void panel.webview.postMessage({ type: 'content', content });
+		const updatedItem = findItemById(content.items ?? [], itemId);
+		if (updatedItem) { showProperties(updatedItem); }
 	};
 
 	/** Записывает правки палитры и отдаёт свойства элемента из перечитанной формы. */
@@ -323,7 +388,7 @@ export async function openFormViewer(
 		}
 		content = await readFormContent(runtime, params.formXmlFsPath, schema, params.cwd);
 		void panel.webview.postMessage({ type: 'content', content });
-		return formItemProperties(findItemById(content.items ?? [], itemId) ?? {}, dictionary);
+		return formItemProperties(findItemById(content.items ?? [], itemId) ?? {}, dictionary, true);
 	};
 
 	panel.webview.onDidReceiveMessage(
@@ -705,7 +770,11 @@ function editableSpec(spec: FormItemPropertySpecDto): boolean {
  * весь набор вида элемента - со значениями по умолчанию там, где в файле ничего нет.
  * Без словаря (старая сборка md-sparrow) показываем то, что записано в файле.
  */
-export function formItemProperties(item: FormItemDto, dictionary?: FormItemPropertyDictionary): PropertyPaletteState {
+export function formItemProperties(
+	item: FormItemDto,
+	dictionary?: FormItemPropertyDictionary,
+	interactiveEvents = false
+): PropertyPaletteState {
 	const written = item.properties ?? {};
 	const specs: FormItemPropertySpecDto[] = dictionary?.[item.type ?? ''] ??
 		Object.keys(written).map((name) => ({ name, kind: 'string' }));
@@ -733,8 +802,21 @@ export function formItemProperties(item: FormItemDto, dictionary?: FormItemPrope
 			value: event.handler,
 			readonly: true,
 			hint: 'Обработчик события',
+			action: interactiveEvents
+				? { id: `event.remove:${event.name ?? ''}`, label: 'Удалить', title: 'Снять обработчик события' }
+				: undefined,
 		};
 		byGroup.set('События', [...(byGroup.get('События') ?? []), row]);
+	}
+	if (interactiveEvents) {
+		byGroup.set('События', [...(byGroup.get('События') ?? []), {
+			key: 'event.add',
+			label: 'Добавить обработчик',
+			kind: 'text',
+			readonly: true,
+			hint: 'Назначить обработчик события элемента формы',
+			action: { id: 'event.add', label: 'Добавить' },
+		}]);
 	}
 
 	const groups: PropertyGroup[] = [];
@@ -749,6 +831,14 @@ export function formItemProperties(item: FormItemDto, dictionary?: FormItemPrope
 		subtitle: ITEM_KIND_LABELS[item.type ?? ''] ?? item.type,
 		groups,
 	};
+}
+
+function isBslIdentifier(value: string): boolean {
+	return /^[\p{L}_][\p{L}\p{N}_]*$/u.test(value.trim());
+}
+
+function isPlatformEventName(value: string): boolean {
+	return /^[A-Za-z_][A-Za-z0-9_]*$/.test(value.trim());
 }
 
 /**

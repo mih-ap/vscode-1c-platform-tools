@@ -450,6 +450,26 @@ suite('Свойства элемента формы для палитры', () =
 		assert.strictEqual(state.subtitle, 'Поле ввода');
 	});
 
+	test('интерактивная палитра позволяет назначить и снять обработчик события', () => {
+		const state = formItemProperties({
+			type: 'InputField',
+			name: 'Код',
+			events: [{ name: 'OnChange', handler: 'КодПриИзменении' }],
+		}, undefined, true);
+		const events = state.groups.find((group) => group.title === 'События')?.rows ?? [];
+
+		assert.deepStrictEqual(events.map((row) => row.key), ['event.OnChange', 'event.add']);
+		assert.strictEqual(events[0].action?.id, 'event.remove:OnChange');
+		assert.strictEqual(events[1].action?.id, 'event.add');
+	});
+
+	test('интерактивная палитра показывает добавление события, даже если обработчиков ещё нет', () => {
+		const state = formItemProperties({ type: 'InputField', name: 'Код' }, undefined, true);
+		const events = state.groups.find((group) => group.title === 'События')?.rows ?? [];
+
+		assert.deepStrictEqual(events.map((row) => row.key), ['event.add']);
+	});
+
 	test('у элемента без имени в заголовке вид элемента', () => {
 		const state = formItemProperties({ type: 'AutoCommandBar' });
 
