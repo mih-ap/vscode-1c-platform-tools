@@ -559,6 +559,15 @@ export function getLoadConfigurationFromSrcCommandName(
 	};
 }
 
+/** Имя команды обновления конфигурации из хранилища. */
+export function getUpdateConfigurationFromRepositoryCommandName(): CommandNameAndTitle {
+	return {
+		id: '1c-platform-tools.cf.updateFromRepository',
+		name: 'Обновить конфигурацию из хранилища',
+		title: 'Обновить конфигурацию из хранилища'
+	};
+}
+
 /**
  * Получить название и заголовок для команды выгрузки конфигурации в src/cf
  */

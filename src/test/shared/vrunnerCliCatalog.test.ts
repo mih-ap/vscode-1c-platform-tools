@@ -31,6 +31,7 @@ const INTENTS: VRunnerIntent[] = [
 	{ kind: 'infobase.dumpDt', out: 'build/ib.dt' },
 	{ kind: 'infobase.restoreDt', file: 'build/ib.dt' },
 	{ kind: 'infobase.listExtensions', json: true },
+	{ kind: 'repo.load' },
 	{ kind: 'cf.build', src: 'src/cf', out: 'build/1Cv8.cf' },
 	{ kind: 'cf.decompileFile', file: 'build/1Cv8.cf', out: 'src/cf' },
 	{ kind: 'cf.dumpIbToSrc', out: 'src/cf' },
